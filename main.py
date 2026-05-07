@@ -1,20 +1,25 @@
 import pytesseract
-from pdf2image import convert_from_path
+from pdf2image import convert_from_path, pdfinfo_from_path
 import re
 import os
 from pathlib import Path
-from datetime import datetime, timedelta
 import shutil
 
 
 def ocr_title_page(path: Path) -> str:
     images = convert_from_path(path, first_page=1, last_page=1)
+
+    # Czytanie ostatniej strony
+    # info = pdfinfo_from_path(path)
+    # last_page = info["Pages"]
+    # images = convert_from_path(path, first_page=last_page, last_page=last_page)
+
     text = pytesseract.image_to_string(images[0], lang="pol")
     return text
 
 
 def find_pesel(text: str) -> str | None:
-    match = re.search(r'Nr\s*PESEL[: ]\s*(\d{11})', text, re.IGNORECASE)
+    match = re.search(r'Nr\s*PESEL[:; ]\s*(\d{11})', text, re.IGNORECASE)
     return match.group(1) if match else None
 
 
@@ -33,13 +38,13 @@ def build_filename(pesel: str, card: tuple[str, str]) -> str:
 def process_file(path: Path, out_ok: Path, out_error: Path):
     try:
         text = ocr_title_page(path)
-        print('caly tekst: ', text)
+        # print('caly tekst: ', text)
 
         pesel = find_pesel(text)
-        print('PESEL PO OCR', pesel)
+        print('PESEL PO OCR: ', pesel)
 
         card = find_card_number(text)
-        print('KARTA PO OCR', card)
+        print('KARTA PO OCR: ', card)
 
 
         if pesel and card:
@@ -55,13 +60,25 @@ def process_file(path: Path, out_ok: Path, out_error: Path):
         shutil.copy2(path, out_error / path.name)
 
 
+def count_files_in_directory(path: Path):
+    return len([file for file in path.iterdir() if file.is_file()])
+
 
 def main():
-    path_in = Path("/mnt/gcm/IT/Darek C/karty infromacyjne KCH/in")
-    print(os.listdir(path_in))
+    # path_in = Path("/mnt/gcm/IT/KPO-digitalizacja/Praktykanci")
+    # path_in = Path("/mnt/gcm/IT/KPO-digitalizacja/Praktykanci/outError")
+    # print(os.listdir(path_in))
 
-    path_ok = Path("/mnt/gcm/IT/Darek C/karty infromacyjne KCH/outOk")
-    path_error = Path("/mnt/gcm/IT/Darek C/karty infromacyjne KCH/outError")
+    # path_ok = Path("/mnt/gcm/IT/KPO-digitalizacja/Praktykanci/outOk")
+    # path_error = Path("/mnt/gcm/IT/KPO-digitalizacja/Praktykanci/outError")
+
+    path_in = Path(os.getenv("INPUT_DIR", "/input"))
+    path_ok = Path(os.getenv("OUTPUT_OK", "/output/outOk"))
+    path_error = Path(os.getenv("OUTPUT_ERROR", "/output/outError"))
+
+    # print('Pliki startowe: ', count_files_in_directory(path_in))
+    # print('Pliki outOk: ', count_files_in_directory(path_ok))
+    # print('Pliki outError: ', count_files_in_directory(path_error))
 
     path_ok.mkdir(exist_ok=True)
     path_error.mkdir(exist_ok=True)
@@ -69,7 +86,6 @@ def main():
     for file in os.listdir(path_in):
         file_path = path_in / file
         print(file_path)
-
         process_file(file_path, path_ok, path_error)
 
 
