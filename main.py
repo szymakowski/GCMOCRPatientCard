@@ -72,9 +72,11 @@ def main():
     # path_ok = Path("/mnt/gcm/IT/KPO-digitalizacja/Praktykanci/outOk")
     # path_error = Path("/mnt/gcm/IT/KPO-digitalizacja/Praktykanci/outError")
 
-    path_in = Path(os.getenv("INPUT_DIR", "/input"))
-    path_ok = Path(os.getenv("OUTPUT_OK", "/output/outOk"))
-    path_error = Path(os.getenv("OUTPUT_ERROR", "/output/outError"))
+    base_path = Path(os.getenv("BASE_DIR", "/data"))
+
+    path_in = base_path
+    path_ok = base_path / "outOk"
+    path_error = base_path / "outError"
 
     # print('Pliki startowe: ', count_files_in_directory(path_in))
     # print('Pliki outOk: ', count_files_in_directory(path_ok))
@@ -83,11 +85,14 @@ def main():
     path_ok.mkdir(exist_ok=True)
     path_error.mkdir(exist_ok=True)
 
-    for file in os.listdir(path_in):
-        file_path = path_in / file
+    for file_path in path_in.iterdir():
+        if not file_path.is_file():
+            continue
+        if file_path.suffix.lower() != ".pdf":
+            continue
         print(file_path)
+        
         process_file(file_path, path_ok, path_error)
-
 
 if __name__ == "__main__":
     main()
